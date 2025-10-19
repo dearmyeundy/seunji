@@ -1,151 +1,48 @@
 import streamlit as st
-import pandas as pd
-import math
-from pathlib import Path
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
-)
+st.set_page_config(layout="wide") # 넓은 화면 설정
+st.title("💖 숫자랑 놀아요 🔢")
+st.markdown("---")
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
+# 학습할 숫자 리스트
+numbers = [1, 2, 3, 4, 5]
 
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+# st.tabs를 사용하여 각 숫자에 대한 탭 생성
+tabs = st.tabs([f"숫자 {n}" for n in numbers])
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
+# 숫자 3 탭 콘텐츠 예시
+with tabs[2]: # 세 번째 탭 (숫자 3)
+    st.header("숫자 3")
+    st.subheader("이것이 세 개! (개념 연계 활동)")
+    
+    # 1. 추상적 숫자 기호 강조
+    st.markdown("## ✨ **3**", unsafe_allow_html=True)
+    
+    # 2. 구체적 형태 (3개) 시각화
+    # st.columns를 사용해 3개의 이미지를 나란히 배치
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.image("apple_icon.png", caption="하나") # 실제 이미지 경로로 대체
+    with col2:
+        st.image("apple_icon.png", caption="둘")
+    with col3:
+        st.image("apple_icon.png", caption="셋")
+        
+    st.markdown("---")
 
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
-
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
-
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
+    # 3. 간단한 인터랙티브 활동 (정답 맞히기)
+    st.subheader("숨겨진 3을 찾아보자! (인터랙션)")
+    
+    options = [2, 3, 5]
+    selection = st.radio(
+        "사과가 세 개 있는 것은 무엇일까요?", 
+        options,
+        horizontal=True
     )
-
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
-
-    return gdp_df
-
-gdp_df = get_gdp_data()
-
-# -----------------------------------------------------------------------------
-# Draw the actual page
-
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
-
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
-
-
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
-
-st.header(f'GDP in {to_year}', divider='gray')
-
-''
-
-cols = st.columns(4)
-
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
-
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
+    
+    if st.button("정답 확인"):
+        if selection == 3:
+            st.success("🎉 **맞았어요! 사과 🍎🍎🍎** 세 개!")
         else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
-
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+            st.error("앗, 다시 세어볼까요? 🤔")
